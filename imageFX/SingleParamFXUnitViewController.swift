@@ -25,6 +25,9 @@ class SingleParamFXUnitViewController: FXUnitViewController {
         self.originalImage = self.image
         
         fxUnit?.setImageOriginal(image)
+        
+        fxUnit?.setImage = setImageVar
+        fxUnit?.setProxy = setImageProxy
     }
 
     override func didReceiveMemoryWarning() {

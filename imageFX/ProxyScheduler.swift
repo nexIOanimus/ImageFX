@@ -8,6 +8,9 @@
 
 import UIKit
 
+private let blockingQueue = dispatch_queue_create("com.nexiosoft.imageFXBlock.sync", DISPATCH_QUEUE_SERIAL)
+private let processingQueue = dispatch_queue_create("com.nexiosoft.imageFXProcess.sync", DISPATCH_QUEUE_SERIAL)
+
 class ProxyScheduler: NSObject {
     
     var functions : [()->Void]
@@ -29,22 +32,48 @@ class ProxyScheduler: NSObject {
     }
     
     func runTask(proxy proxy: ()->Void, actual: ()->Void) {
-        
-        if functions.count > 1 {
-            functions.removeRange(1..<functions.count)
-        }
-        functions.append(proxy)
-        functions.append(actual)
-        
-        if (!isRunning) {
-            dispatch_async(dispatch_get_main_queue(), {
-                self.isRunning = true
-                while !self.functions.isEmpty {
-                    let f = self.functions.removeFirst()
-                    f()
+        dispatch_async(blockingQueue) {
+            if self.functions.count > 1 {
+                self.functions.removeRange(1..<self.functions.count)
+            }
+            
+            self.functions.append(proxy)
+            self.functions.append(actual)
+            
+            /*
+             if (!isRunning) {
+             self.isRunning = true
+             dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), {
+             while !self.functions.isEmpty {
+             if let f : (()->Void) = self.functions.removeFirst() {
+             f()
+             }
+             }
+             self.isRunning = false
+             })
+             }
+             */
+            
+            func runFunctions() {
+                dispatch_async(blockingQueue) {
+                    if let f : (()->Void) = self.functions.removeFirst() {
+                        dispatch_async(processingQueue) {
+                            f();
+                        }
+                    }
+                    
+                    if !self.functions.isEmpty {
+                        runFunctions();
+                    } else {
+                        self.isRunning = false;
+                    }
                 }
-                self.isRunning = false
-            })
+            }
+            
+            if !self.isRunning {
+                self.isRunning = true;
+                runFunctions();
+            }
         }
     }
 }

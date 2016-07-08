@@ -41,9 +41,11 @@ class SingleParamFXUnit: FXUnit {
         fxFilter.setValue(originalImage, forKey: kCIInputImageKey)
         fxFilter.setValue(param * multiplier + offset, forKey: key)
         
-        if let out = fxFilter.outputImage {
-            let renderedImage = context.createCGImage(out, fromRect: out.extent)
-            onFinish(UIImage(CGImage: renderedImage))
+        if let out = self.fxFilter.outputImage {
+            dispatch_async(dispatch_get_main_queue(), {
+                let renderedImage = self.context.createCGImage(out, fromRect: out.extent)
+                onFinish(UIImage(CGImage: renderedImage))
+            })
         }
     }
     
